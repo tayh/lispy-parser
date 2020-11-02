@@ -12,17 +12,17 @@ grammar = Lark(
         ?start : expr+
 
             ?expr : atom
-                | list
+                | list_
                 | quote 
             
 
-            list  : "(" expr+ ")"
+            list_  : "(" expr+ ")"
 
             quote : "'" expr
             
             ?atom : STRING -> string
                 | NUMBER -> num
-                | BOOLEAN -> bool
+                | BOOLEAN -> boolean
                 | NAME -> name
                 | CHAR -> char
 
@@ -52,44 +52,36 @@ class LispyTransformer(InlineTransformer):
         "tab": "\t",
     }
 
+    def start(self, *args):
+        if len(list(args)) > 1:
+            return [Symbol("begin")] + list(args)
+        else:
+            return args
    
+    def string(self, tk):
+        return eval(tk)
+    
+    def num(self, tk):
+        return float(tk)
+    
+    def boolean(self, tk):
+        if tk == '#t':
+            return True
+        else:
+            return False
+
     def name(self, tk):
         return Symbol(tk)
 
-    def number(self, tk):
-        return float(tk)
-
-    def true(self):
-        return True
+    def char(self, tk):    
+        if len(tk) == 3:
+            return str(tk[2])
+        else:
+            tk = tk[2:].lower()
+            return self.CHARS[tk]
     
-    def false(self):
-        return False
-    
-    def null(self):
-        return None
-
-    def array(self, *args):
+    def list_(self, *args):
         return list(args)
 
-    def object(self, *args):
-        raise NotImplementedError
-
-exemplos = [
-    "(max 1 2)"
-
-    r"""
-       ;; Fatorial
-       (define fat (lambda (n) 
-           (if (<= n 1)
-               1
-               (* n (fat (- n 1))))))
-       (print (fat 5))
-    """
-]
-for exemplo in exemplos:
-    transformer = LispyTransformer()
-    tree = grammar.parse(exemplo)
-    print(tree.pretty())
-    lispy = transformer.transform(tree)
-    print(lispy)
-    print('-' * 50)
+    def quote(self, tk):
+        return [Symbol("quote"), tk]
