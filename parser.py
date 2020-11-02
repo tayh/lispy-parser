@@ -22,16 +22,14 @@ grammar = Lark(
             
             ?atom : STRING -> string
                 | NUMBER -> num
-                | SYMBOL -> symbol
                 | BOOLEAN -> bool
                 | NAME -> name
                 | CHAR -> char
 
+            NAME   : /[a-zA-Z][-?\w]*/ | /[-+=\/*<><=]+/
             STRING : /\"[^"\\]*(\\[^\n\t\r\f][^"\\]*)*\"/
-            SYMBOL : /[-+=\/*!@$^&~<>?<=]+/
             NUMBER : /\+?\-?\d+(\.\d*)?([eE][+-]?\d+)?/
             BOOLEAN: /\#t|\#f/
-            NAME   : /[a-zA-Z][-?\w]*/
             CHAR   : /\#\\[\w]+|\d+/
 
             %ignore /\s+/
@@ -54,11 +52,9 @@ class LispyTransformer(InlineTransformer):
         "tab": "\t",
     }
 
-    def atom(self, tk):
-        return tk
-    
-    def comment(self, tk):
-        return tk
+   
+    def name(self, tk):
+        return Symbol(tk)
 
     def number(self, tk):
         return float(tk)
@@ -78,4 +74,22 @@ class LispyTransformer(InlineTransformer):
     def object(self, *args):
         raise NotImplementedError
 
+exemplos = [
+    "(max 1 2)"
 
+    r"""
+       ;; Fatorial
+       (define fat (lambda (n) 
+           (if (<= n 1)
+               1
+               (* n (fat (- n 1))))))
+       (print (fat 5))
+    """
+]
+for exemplo in exemplos:
+    transformer = LispyTransformer()
+    tree = grammar.parse(exemplo)
+    print(tree.pretty())
+    lispy = transformer.transform(tree)
+    print(lispy)
+    print('-' * 50)
